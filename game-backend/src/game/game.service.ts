@@ -5,9 +5,7 @@ import { Server } from 'socket.io';
 
 @Injectable()
 export class GameService {
-  private width: number;
-  private height: number;
-  private framePerSeconds: number;
+  private framePerSeconds: number = 60;
   private loop: NodeJS.Timeout | null = null;
   private isPaused = false;
   private leftPlayer: Player;
@@ -18,11 +16,25 @@ export class GameService {
   private target: number = 10;
   private winner: string | null = null;
 
-  constructor() {
+  constructor(
+    private readonly width: number,
+    private readonly height: number,
+  ) {
+    this.framePerSeconds = 60;
     this.width = 800;
     this.height = 500;
-    this.framePerSeconds = 60;
+    this.initializePlayers();
+    this.initializeBall();
+  }
 
+  setServer(server: Server, roomId: string) {
+    this.server = server;
+    this.room = roomId;
+    this.initializePlayers();
+    this.initializeBall();
+  }
+
+  private initializePlayers(): void {
     this.leftPlayer = new Player(0, (this.height - 100) / 2, 10, 100, 0);
     this.rightPlayer = new Player(
       this.width - 10,
@@ -31,12 +43,10 @@ export class GameService {
       100,
       0,
     );
-    this.ball = new Ball(this.width / 2, this.height / 2, 10, 5, 5, 7);
   }
 
-  setServer(server: Server, roomId: string) {
-    this.server = server;
-    this.room = roomId;
+  private initializeBall(): void {
+    this.ball = new Ball(this.width / 2, this.height / 2, 10, 5, 5, 7);
   }
 
   private updateGameScores(): void {
@@ -85,7 +95,7 @@ export class GameService {
   }
 
   getGameState(): any {
-    const gameState = {
+    return {
       player1: {
         x: this.leftPlayer.x,
         y: this.leftPlayer.y,
@@ -104,13 +114,11 @@ export class GameService {
         r: this.ball.radius,
       },
     };
-    return gameState;
   }
 
   update(): void {
     this.updateGameScores();
     this.ball.moveBall();
-    // this.autoAiControl();
     this.ball.ballTopAndBottomCollision(this.height);
     const player =
       this.ball.x + this.ball.radius < this.width / 2
@@ -146,23 +154,18 @@ export class GameService {
   }
 
   clearGameState(): void {
-    this.leftPlayer = new Player(0, (this.height - 100) / 2, 10, 100, 0);
-    this.rightPlayer = new Player(
-      this.width - 10,
-      (this.height - 100) / 2,
-      10,
-      100,
-      0,
-    );
-    this.ball = new Ball(this.width / 2, this.height / 2, 10, 5, 5, 7);
+    this.initializePlayers();
+    this.initializeBall();
     this.isPaused = false;
     if (this.loop !== null) {
       clearInterval(this.loop);
       this.loop = null;
     }
   }
+
   endGame(): void {
-    this.clearGameState();
+    this.clearGameState(); // Clear game state
+    // Emit 'gameEnded' event with winner information
     this.server.to(this.room).emit('gameEnded', { winner: this.winner });
   }
 }

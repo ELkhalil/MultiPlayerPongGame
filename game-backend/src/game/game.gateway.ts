@@ -30,13 +30,4 @@ export class GameGateway implements OnGatewayDisconnect, OnGatewayConnection {
   handlePlayerInput(client: Socket, { roomId, player, direction }) {
     this.matchmakingService.movePlayer(roomId, player, direction);
   }
-  @SubscribeMessage('pauseGame')
-  handleGamePause(client: Socket, roomId: string) {
-    this.matchmakingService.pauseGame(client, roomId);
-  }
-
-  @SubscribeMessage('resumeGame')
-  handleGameResume(client: Socket, { roomId }) {
-    this.matchmakingService.resumeGame(client, roomId);
-  }
 }

@@ -6,7 +6,10 @@ import { GameService } from './game.service';
 export class MatchmakingService {
   private logger = new Logger(MatchmakingService.name);
   private waitingPlayers: Socket[] = [];
-  private currentRooms: Map<string, Socket[]> = new Map();
+  private currentRooms: Map<
+    string,
+    { players: Socket[]; gameService: GameService }
+  > = new Map();
   private server: Server;
 
   constructor(private readonly gameService: GameService) {}
@@ -27,32 +30,32 @@ export class MatchmakingService {
     );
   }
 
-  handlePlayerDisconnect(player: Socket) {
-    this.logger.log(`Player id: ${player.id} Disconnected`);
-    this.removePlayerFromRoom(player);
-
-    // Check if there's only one player left in the room
-    this.currentRooms.forEach((players, roomId) => {
-      if (players.length === 1) {
-        const remainingPlayer = players[0];
-        remainingPlayer.leave(roomId);
+  handlePlayerDisconnect(client: Socket) {
+    this.logger.log(`Player id: ${client.id} Disconnected`);
+    const roomId = this.findPlayerRoom(client);
+    if (roomId) {
+      const room = this.currentRooms.get(roomId);
+      if (room) {
+        const gameService = room.gameService;
+        gameService.clearGameState();
+        this.server.to(roomId).emit('playerLeft', {
+          winner: null,
+          reason: 'Opponent disconnected',
+        });
         this.currentRooms.delete(roomId);
-        this.gameService.clearGameState();
-        this.server
-          .to(roomId)
-          .emit('gameEnded', { winner: null, reason: 'Opponent disconnected' });
       }
-    });
-
-    // Remove the disconnected player from the waiting queue
+    }
     const remainingPlayers = this.waitingPlayers.filter(
-      (p) => p.id !== player.id,
+      (p) => p.id !== client.id,
     );
     this.waitingPlayers = remainingPlayers;
   }
+
   private matchPlayers(players: Socket[]) {
     const roomId = Date.now().toString();
-    this.currentRooms.set(roomId, players); // Assign players to the room
+    const gameService = new GameService(800, 500);
+    gameService.setServer(this.server, roomId);
+    this.currentRooms.set(roomId, { players, gameService }); // Assign GameService instance to the room
     players.forEach((player, index) => {
       player.join(roomId);
       player.emit('matchFound', { roomId, playerNumber: index + 1 });
@@ -61,59 +64,36 @@ export class MatchmakingService {
   }
 
   private manageRunningRoom(roomId: string) {
-    const gameState = this.gameService.getGameState();
-    this.gameService.setServer(this.server, roomId);
-
-    const roomPlayers = this.currentRooms.get(roomId);
-    if (roomPlayers && roomPlayers.length === 2) {
+    const room = this.currentRooms.get(roomId);
+    if (room) {
+      const gameService = room.gameService;
+      const gameState = gameService.getGameState();
       this.server.to(roomId).emit('startingGame', gameState);
       setTimeout(() => {
-        this.gameService.startGame();
+        gameService.startGame();
       }, 5000);
     } else {
       this.server
         .to(roomId)
         .emit('matchCancelled', { reason: 'Not enough players' });
       this.currentRooms.delete(roomId);
-      this.gameService.clearGameState();
     }
   }
 
   movePlayer(roomId: string, player: number, direction: 'up' | 'down') {
-    this.logger.log(`Player ${player} moved ${direction}`);
-    const playersInRoom = this.currentRooms.get(roomId);
-    if (playersInRoom) {
-      this.gameService.handlePlayerMovement(player, direction);
+    const room = this.currentRooms.get(roomId);
+    if (room) {
+      const gameService = room.gameService;
+      gameService.handlePlayerMovement(player, direction);
     }
   }
 
-  private removePlayerFromRoom(player: Socket) {
-    this.currentRooms.forEach((players, roomId) => {
-      const index = players.indexOf(player);
-      if (index !== -1) {
-        players.splice(index, 1);
-        if (players.length === 0) {
-          this.currentRooms.delete(roomId);
-        }
+  private findPlayerRoom(player: Socket): string | undefined {
+    for (const [roomId, room] of this.currentRooms.entries()) {
+      if (room.players.includes(player)) {
+        return roomId;
       }
-    });
-  }
-
-  pauseGame(client: Socket, roomId: string) {
-    this.logger.log(`Game paused in room ${roomId}`);
-    const roomPlayers = this.currentRooms.get(roomId);
-    if (roomPlayers) {
-      this.server.to(roomId).emit('gamePaused');
-      this.gameService.pauseGame();
     }
-  }
-
-  resumeGame(client: Socket, roomId: string) {
-    this.logger.log(`Game resumed in room ${roomId}`);
-    const roomPlayers = this.currentRooms.get(roomId);
-    if (roomPlayers) {
-      this.server.to(roomId).emit('gameResumed');
-      this.gameService.resumeGame();
-    }
+    return undefined;
   }
 }
