@@ -1,0 +1,9 @@
+export enum UserStatus {
+  ONLINE,
+  IN_MATCHMAKING,
+  MATCHED,
+  WAITING_GAME,
+  COUNTDOWN,
+  IN_GAME,
+  FINISHED_GAME,
+}

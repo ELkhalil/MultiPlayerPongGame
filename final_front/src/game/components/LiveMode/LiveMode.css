@@ -1,0 +1,25 @@
+.liveModeContainer {
+  text-align: center;
+  padding: 50px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.liveModeHeading {
+  font-size: 48px;
+  margin-bottom: 20px;
+  color: #000000;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.canvasContainer {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.game {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}

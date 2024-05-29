@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId           String           @id @default(uuid())
+  email            String?          @unique
+  username         String?          @unique
+  intraId          String?          @unique
+  online           Boolean          @default(false)
+  firstName        String?
+  bio              String?
+  lastName         String?
+  password         String?
+  refreshToken     String?
+  avatar           String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  recipient        Notification[]
+  firstFriendship  Friendship[]     @relation("from")
+  secondFriendship Friendship[]     @relation("to")
+  blockedByUser    BlockedUser[]    @relation("blockeById")
+  blockedUser      BlockedUser[]    @relation("blockedId")
+  message          Message[]
+  ownedRooms       ChatRoom[]
+  roomMember       ChatRoomMember[]
+
+  // (Game)
+  player1          Game[]           @relation("player1")
+  player2          Game[]           @relation("player2")
+  winner           Game[]           @relation("winner")
+  userLevel        Int
+}
+
+model Friendship {
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  id        String           @id @default(uuid())
+  fromUser  String
+  toUser    String
+  from      User             @relation("from", fields: [fromUser], references: [userId], onDelete: Cascade)
+  to        User             @relation("to", fields: [toUser], references: [userId], onDelete: Cascade)
+  status    FriendshipStatus
+
+  @@unique([fromUser, toUser], name: "unique_friendship")
+}
+
+model BlockedUser {
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  id         String   @id @default(uuid())
+  dmId       String?
+  blocked    String
+  blockedBy  String
+  blockedId  User     @relation("blockedId", fields: [blocked], references: [userId], onDelete: Cascade)
+  blockeById User     @relation("blockeById", fields: [blockedBy], references: [userId], onDelete: Cascade)
+
+  @@unique([blocked, blockedBy], name: "unique_block")
+}
+
+model Message {
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  id         String   @id @default(uuid())
+  author     User     @relation(fields: [authorId], references: [userId], onDelete: Cascade)
+  authorId   String
+  content    String
+  ChatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  chatRoomId String
+
+  @@unique([createdAt]) // no dupliccate msg
+}
+
+model ChatRoomMember {
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  id         String   @id @default(uuid())
+  isAdmin    Boolean          @default(false)
+  isBanned   Boolean          @default(false)
+  bannedAt   DateTime @updatedAt
+  isMuted    Boolean          @default(false)
+  muted_exp    DateTime?
+  member     User     @relation(fields: [memberID], references: [userId], onDelete: Cascade)
+  memberID   String
+  ChatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  chatRoomId String
+
+  @@unique([memberID, chatRoomId], name: "unique_member_room")
+}
+
+model ChatRoom {
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  id        String           @id @default(uuid())
+  roomName  String?
+  password  String?
+  type      ChatRoomType     @default(public)
+  owner     User             @relation(fields: [ownerId], references: [userId], onDelete: Cascade)
+  ownerId   String
+  messages  Message[]
+
+  members   ChatRoomMember[]
+}
+
+model Game {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  player1Id   String
+  player2Id   String
+  player1     User     @relation("player1", fields: [player1Id], references: [userId], onDelete: Cascade)
+  player2     User     @relation("player2", fields: [player2Id], references: [userId], onDelete: Cascade)
+  winnerId    String?
+  winner      User?    @relation("winner", fields: [winnerId], references: [userId], onDelete: SetNull)
+
+  // by abdo
+  gameStatus  GameStatus
+  minScore    Int
+  maxScore    Int
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  createdAt   DateTime         @default(now())
+  type        NotificationType
+  content     String
+  isRead      Boolean          @default(false)
+  recipient   User             @relation(fields: [recipientId], references: [userId], onDelete: Cascade)
+  recipientId String
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+
+enum NotificationType {
+  FriendRequest
+  MessageReceived
+  RoomInvitation
+  Other
+}
+
+enum ChatRoomType {
+  public
+  Dm
+  private
+  protected
+}
+
+enum GameStatus {
+  CANCELED
+  PLAYED
+}

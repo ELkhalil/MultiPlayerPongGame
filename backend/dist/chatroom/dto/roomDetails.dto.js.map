@@ -1,0 +1,1 @@
+{"version":3,"file":"roomDetails.dto.js","sourceRoot":"","sources":["../../../src/chatroom/dto/roomDetails.dto.ts"],"names":[],"mappings":";;;AAEA,MAAa,cAAc;IACvB,YAAY,IAAc;QACtB,IAAI,CAAC,QAAQ,GAAG,IAAI,CAAC,IAAI,CAAC;QAC1B,IAAI,CAAC,UAAU,GAAG,IAAI,CAAC,OAAO,CAAC;QAC/B,IAAI,CAAC,IAAI,GAAG,IAAI,CAAC,SAAS,CAAC;IAC/B,CAAC;CAIJ;AATD,wCASC"}

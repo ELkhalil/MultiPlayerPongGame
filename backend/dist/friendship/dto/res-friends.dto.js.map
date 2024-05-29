@@ -1,0 +1,1 @@
+{"version":3,"file":"res-friends.dto.js","sourceRoot":"","sources":["../../../src/friendship/dto/res-friends.dto.ts"],"names":[],"mappings":";;;AAAA,MAAa,cAAc;IACzB,YAAY,MAAW;QACrB,IAAI,CAAC,IAAI,GAAG,MAAM,EAAE,IAAI,CAAC;QACzB,IAAI,CAAC,EAAE,GAAG,MAAM,EAAE,EAAE,CAAC;QACrB,IAAI,CAAC,MAAM,GAAG,MAAM,EAAE,MAAM,CAAC;IAC/B,CAAC;CAIF;AATD,wCASC"}
